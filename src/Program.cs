@@ -19,9 +19,14 @@ namespace TinyWebServer
                 res.Content = "tchau";
             });
 
-            server.Register("/oie", (req, res) =>
+            server.Register("/hello", (req, res) =>
             {
-                res.Content = $"Oie!...";
+                res.Content = $"Hello there...!";
+            });
+
+            server.Register("/error", (req, res) =>
+            {
+                throw new Exception("dead monkey");
             });
 
             server.RegisterFallback((req, res) =>
@@ -48,7 +53,7 @@ namespace TinyWebServer
                     Console.WriteLine(ex.StackTrace);
                 }
 
-                res.Content = "Blz... " + req.Endpoint;
+                res.Content = "Okey dokey... " + req.Endpoint;
             });
 
             server.RunAsync(cancelToken.Token).GetAwaiter().GetResult();

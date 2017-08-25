@@ -14,7 +14,7 @@ namespace TinyWebServer
     {
         private readonly IPAddress _host;
         private readonly int _port;
-        private readonly Dictionary<StatusCode, string> _errorContent = new Dictionary<StatusCode, string>();
+        private readonly Dictionary<StatusCode, string> _errorPage = new Dictionary<StatusCode, string>();
         private readonly Dictionary<string, Action<Request, Response>> _callbacks = new Dictionary<string, Action<Request, Response>>();
         private Action<Request, Response> _fallback;
 
@@ -23,9 +23,9 @@ namespace TinyWebServer
             _host = IPAddress.Parse(host);
             _port = port;
 
-            _errorContent[StatusCode.InternalServerError] = "<title>500 Internal Server Error</title><h1>Internal Server Error</h1>";
-            _errorContent[StatusCode.NotFound] = "<title>404 Page Not Found</title><h1>Page Not Found</h1>";
-            _errorContent[StatusCode.BadRequest] = "<title>400 Bad Request</title><h1>Bad Request</h1>";
+            _errorPage[StatusCode.InternalServerError] = Path.Combine("static", "internal-server-error.html");
+            _errorPage[StatusCode.NotFound] = Path.Combine("static", "page-not-found.html");
+            _errorPage[StatusCode.BadRequest] = Path.Combine("static", "bad-request.html");
         }
 
         public void Register(string endpoint, Action<Request, Response> callback)
@@ -76,7 +76,7 @@ namespace TinyWebServer
             using (var reader = new StreamReader(client.GetStream()))
             using (var writer = new StreamWriter(client.GetStream()))
             {
-                var response = ProcessRequest(await ReadAsync(reader));
+                var response = await ProcessRequest(await ReadAsync(reader));
 
                 await writer.WriteAsync(response.ToString());
             }
@@ -106,7 +106,7 @@ namespace TinyWebServer
             }
         }
 
-        private Response ProcessRequest(string requestText)
+        private async Task<Response> ProcessRequest(string requestText)
         {
             Request request = null;
             var response = new Response();
@@ -120,7 +120,7 @@ namespace TinyWebServer
                 Console.WriteLine(ex.StackTrace);
 
                 response.Code = StatusCode.BadRequest;
-                response.Content = _errorContent[StatusCode.BadRequest];
+                response.Content = await File.ReadAllTextAsync(_errorPage[StatusCode.BadRequest]);
 
                 return response;
             }
@@ -134,17 +134,18 @@ namespace TinyWebServer
                 else
                 {
                     response.Code = StatusCode.NotFound;
-                    response.Content = _errorContent[StatusCode.NotFound];
+                    response.Content = await File.ReadAllTextAsync(_errorPage[StatusCode.NotFound]);
 
                     _fallback?.Invoke(request, response);
                 }
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 Console.WriteLine(ex.StackTrace);
 
                 response.Code = StatusCode.InternalServerError;
-                response.Content = _errorContent[StatusCode.InternalServerError];
+                response.Content = await File.ReadAllTextAsync(_errorPage[StatusCode.InternalServerError]);
             }
 
             return response;
