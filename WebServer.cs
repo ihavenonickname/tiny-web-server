@@ -12,17 +12,23 @@ namespace TinyWebServer
 {
     public class WebServer
     {
-        public event Action<Request, Response> OnRequest;
-
         private readonly IPAddress _host;
         private readonly int _port;
         private readonly string _contentError500;
+        private readonly string _contentError404;
+        private readonly Dictionary<string, Action<Request, Response>> callbacks = new Dictionary<string, Action<Request, Response>>();
 
         public WebServer(string host, int port)
         {
             _host = IPAddress.Parse(host);
             _port = port;
             _contentError500 = "<title>500 Internal Server Error</title><h1>Internal Server Error</h1>";
+            _contentError404 = "<title>404 Page Not Found</title><h1>Page Not Found</h1>";
+        }
+
+        public void Register(string endpoint, Action<Request, Response> callback)
+        {
+            callbacks[endpoint] = callback;
         }
 
         public async Task RunAsync(CancellationToken canToken)
@@ -93,15 +99,26 @@ namespace TinyWebServer
         {
             try
             {
-                var request = Request.FromHttpHeader(text);
+                var request = new Request(text);
                 var response = new Response();
 
-                OnRequest?.Invoke(request, response);
+                if (!callbacks.ContainsKey(request.Endpoint))
+                {
+                    return new Response
+                    {
+                        Code = Response.StatusCode.NotFound,
+                        Content = _contentError404
+                    };
+                }
+
+                callbacks[request.Endpoint](request, response);
 
                 return response;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.StackTrace);
+
                 return new Response
                 {
                     Code = Response.StatusCode.InternalServerError,
