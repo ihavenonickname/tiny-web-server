@@ -21,6 +21,11 @@ namespace TinyWebServer
 
             server.Register("/oie", (req, res) =>
             {
+                res.Content = $"Oie!...";
+            });
+
+            server.RegisterFallback((req, res) =>
+            {
                 try
                 {
                     Console.WriteLine("------------------");
@@ -40,11 +45,10 @@ namespace TinyWebServer
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Errorrrrrrrrrrrrrrrrrr");
                     Console.WriteLine(ex.StackTrace);
                 }
 
-                res.Content = $"blz...</br>{req.Endpoint}</br>{req.Method}";
+                res.Content = "Blz... " + req.Endpoint;
             });
 
             server.RunAsync(cancelToken.Token).GetAwaiter().GetResult();
